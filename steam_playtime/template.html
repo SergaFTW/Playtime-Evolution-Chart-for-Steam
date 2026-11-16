@@ -1,0 +1,217 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Steam Playtime</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; summary first, then weekly, cumulative, per-game detail, table */
+:root{
+  --bg:#f3f5f8; --panel:#ffffff; --fg:#141a24; --muted:#5b6678; --line:#dde2ea; --accent:#2f6fde;
+  --display:"Chakra Petch",system-ui,sans-serif; --body:"Inter",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root{--bg:#0f131a;--panel:#171c25;--fg:#e8ecf3;--muted:#8f9bb0;--line:#283041;--accent:#6aa0ff;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding:32px 16px 56px;display:flex;flex-direction:column;gap:28px}
+h1{font-family:var(--display);font-size:clamp(28px,5vw,40px);margin:0;letter-spacing:.01em;text-wrap:balance}
+h2{font-family:var(--display);font-size:20px;margin:0;font-weight:600}
+.sub{color:var(--muted);margin:6px 0 0;max-width:68ch}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:720px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+.kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.kpi .v{font-family:var(--display);font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .v small{font-size:14px;color:var(--muted);font-weight:500}
+.kpi .n{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+section{display:flex;flex-direction:column;gap:12px}
+.head{display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.chart{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;position:relative;height:360px}
+@media (max-width:600px){.chart{height:300px}}
+select{font:inherit;font-size:14px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);max-width:100%}
+select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tbl{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:620px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line)}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:none}
+.dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:8px;vertical-align:middle}
+.bar{height:6px;border-radius:3px;opacity:.8}
+.note{font-size:13px;color:var(--muted);max-width:75ch}
+.err{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 data-t="title"></h1>
+    <p class="sub" id="range"></p>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section>
+    <div class="head"><h2 data-t="weekly"></h2><p class="hint" data-t="legendHint"></p></div>
+    <div class="chart"><canvas id="weekly"></canvas></div>
+  </section>
+
+  <section>
+    <div class="head"><h2 data-t="cumulative"></h2></div>
+    <div class="chart"><canvas id="cumul"></canvas></div>
+  </section>
+
+  <section>
+    <div class="head"><h2 data-t="perGame"></h2><select id="pick"></select></div>
+    <div class="chart"><canvas id="daily"></canvas></div>
+  </section>
+
+  <section>
+    <h2 data-t="allGames"></h2>
+    <div class="tbl"><table>
+      <thead><tr><th data-t="game"></th><th class="num" data-t="hours"></th><th style="width:22%"></th><th class="num" data-t="sessions"></th><th class="num" data-t="avg"></th><th data-t="first"></th><th data-t="last"></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+  </section>
+
+  <p class="note" id="note"></p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const SESSIONS = __DATA__;
+const LANG = __LANG__;
+const GENERATED = __GENERATED__;
+
+const I18N = {
+  en: {
+    locale: "en-GB", title: "Steam playtime",
+    range: (a,b) => `Play sessions recorded by Steam from ${a} to ${b}.`,
+    total: "Total time", games: n => `${n} games`, sessions: "Sessions", activeDays: n => `${n} days played`,
+    top: "Most played", ofTotal: p => `${p}% of total`, longest: "Longest session",
+    weekly: "Hours per week", legendHint: "Click a game in the legend to hide it", cumulative: "Cumulative hours",
+    perGame: "Per-game detail", pickLabel: "Choose a game", allGames: "All games", game: "Game", hours: "Hours",
+    avg: "Average", first: "First", last: "Last", other: "Other", hoursAxis: "hours", min: "min", h: "h",
+    noChart: "The charts need an internet connection to load Chart.js. The table below still works offline.",
+    note: g => `Source: Steam's gameprocess_log, which records when each game launched through Steam starts and stops. Games from other launchers are not included. Sessions without a recorded end (Steam closed abruptly) are skipped. Generated ${g}.`,
+  },
+  es: {
+    locale: "es-ES", title: "Mis horas en Steam",
+    range: (a,b) => `Sesiones de juego registradas por Steam entre el ${a} y el ${b}.`,
+    total: "Tiempo total", games: n => `${n} juegos`, sessions: "Sesiones", activeDays: n => `${n} días con partida`,
+    top: "Más jugado", ofTotal: p => `${p} % del total`, longest: "Sesión más larga",
+    weekly: "Horas por semana", legendHint: "Pulsa un juego en la leyenda para ocultarlo", cumulative: "Horas acumuladas",
+    perGame: "Detalle por juego", pickLabel: "Elegir juego", allGames: "Todos los juegos", game: "Juego", hours: "Horas",
+    avg: "Media", first: "Primera", last: "Última", other: "Otros", hoursAxis: "horas", min: "min", h: "h",
+    noChart: "Los gráficos necesitan conexión a internet para cargar Chart.js. La tabla funciona sin conexión.",
+    note: g => `Fuente: gameprocess_log de Steam, que registra cuándo empieza y termina cada juego lanzado desde Steam. No incluye juegos de otros launchers. Las sesiones sin cierre registrado (Steam se cerró de golpe) se descartan. Generado el ${g}.`,
+  },
+};
+const T = I18N[LANG] || I18N.en;
+document.documentElement.lang = LANG;
+document.title = T.title;
+document.querySelectorAll("[data-t]").forEach(el => { el.textContent = T[el.dataset.t]; });
+document.getElementById("pick").setAttribute("aria-label", T.pickLabel);
+
+const PALETTE = ["#3b82f6","#f59e0b","#10b981","#ef4444","#8b5cf6","#06b6d4","#ec4899","#84cc16"];
+const OTHER = "#94a3b8";
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtH = m => (m/60).toLocaleString(T.locale,{maximumFractionDigits:1});
+const fmtD = d => d.toLocaleDateString(T.locale,{day:"numeric",month:"short",year:"numeric"});
+const fmtShort = d => d.toLocaleDateString(T.locale,{day:"numeric",month:"short"});
+const dayKey = d => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+const midnight = d => new Date(d.getFullYear(),d.getMonth(),d.getDate());
+const addDays = (d,n) => new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);
+
+SESSIONS.forEach(s => { s.s = new Date(s.start); s.e = new Date(s.end); });
+
+const games = {};
+SESSIONS.forEach(s => {
+  const g = games[s.name] ||= {name:s.name,min:0,n:0,first:s.s,last:s.e};
+  g.min += s.min; g.n++; if (s.s < g.first) g.first = s.s; if (s.e > g.last) g.last = s.e;
+});
+const ranked = Object.values(games).sort((a,b)=>b.min-a.min);
+const TOP = ranked.slice(0,8).map(g=>g.name);
+const color = n => { const i = TOP.indexOf(n); return i>=0 ? PALETTE[i] : OTHER; };
+
+const start = new Date(Math.min(...SESSIONS.map(s=>s.s))), end = new Date(Math.max(...SESSIONS.map(s=>s.e)));
+const totalMin = ranked.reduce((a,g)=>a+g.min,0);
+const activeDays = new Set(SESSIONS.map(s=>dayKey(s.s))).size;
+const longest = SESSIONS.reduce((a,s)=>s.min>a.min?s:a);
+document.getElementById("range").textContent = T.range(fmtD(start), fmtD(end));
+document.getElementById("note").textContent = T.note(new Date(GENERATED).toLocaleString(T.locale));
+document.getElementById("kpis").innerHTML = [
+  [T.total, `${fmtH(totalMin)}<small> ${T.h}</small>`, T.games(ranked.length)],
+  [T.sessions, SESSIONS.length, T.activeDays(activeDays)],
+  [T.top, esc(ranked[0].name), `${fmtH(ranked[0].min)} ${T.h} · ${T.ofTotal(Math.round(ranked[0].min/totalMin*100))}`],
+  [T.longest, `${fmtH(longest.min)}<small> ${T.h}</small>`, `${esc(longest.name)} · ${fmtD(longest.s)}`],
+].map(([l,v,n])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="n" title="${n}">${n}</div></div>`).join("");
+
+const maxMin = ranked[0].min;
+document.getElementById("rows").innerHTML = ranked.map(g=>`<tr>
+  <td><span class="dot" style="background:${color(g.name)}"></span>${esc(g.name)}</td>
+  <td class="num">${fmtH(g.min)}</td>
+  <td><div class="bar" style="width:${Math.max(1,g.min/maxMin*100)}%;background:${color(g.name)}"></div></td>
+  <td class="num">${g.n}</td>
+  <td class="num">${Math.round(g.min/g.n)} ${T.min}</td>
+  <td>${fmtD(g.first)}</td><td>${fmtD(g.last)}</td></tr>`).join("");
+
+const pick = document.getElementById("pick");
+pick.innerHTML = ranked.map(g=>`<option>${esc(g.name)}</option>`).join("");
+
+if (typeof Chart === "undefined") {
+  document.querySelectorAll(".chart").forEach(c => { c.style.height = "auto"; c.innerHTML = `<p class="hint">${T.noChart}</p>`; });
+} else {
+  // weeks start on Monday
+  const monday = d => addDays(midnight(d), -((d.getDay()+6)%7));
+  const weeks = []; for (let w = monday(start); w <= end; w = addDays(w,7)) weeks.push(w);
+  const wIdx = d => Math.round((monday(d)-weeks[0])/(7*864e5));
+  const others = ranked.length > TOP.length;
+  const series = others ? [...TOP, T.other] : [...TOP];
+  const wk = Object.fromEntries(series.map(n=>[n,new Array(weeks.length).fill(0)]));
+  SESSIONS.forEach(s => { const k = TOP.includes(s.name)?s.name:T.other; wk[k][wIdx(s.s)] += s.min/60; });
+
+  const days = []; for (let d = midnight(start); d <= end; d = addDays(d,1)) days.push(d);
+  const dIdx = d => Math.round((midnight(d)-days[0])/864e5);
+  const dLabels = days.map(fmtShort);
+
+  const charts = [];
+  const base = () => {
+    const fg = css("--fg"), line = css("--line");
+    Chart.defaults.color = css("--muted"); Chart.defaults.font.family = "Inter, system-ui, sans-serif"; Chart.defaults.borderColor = line;
+    return {maintainAspectRatio:false,responsive:true,interaction:{mode:"index",intersect:false},
+      plugins:{legend:{position:"bottom",labels:{boxWidth:10,boxHeight:10,color:fg,padding:12}},
+        tooltip:{itemSort:(a,b)=>b.raw-a.raw,filter:i=>i.raw>0.05,callbacks:{label:c=>` ${c.dataset.label}: ${c.raw.toLocaleString(T.locale,{maximumFractionDigits:1})} ${T.h}`}}},
+      scales:{x:{grid:{display:false},ticks:{maxRotation:0,autoSkipPadding:14}},y:{beginAtZero:true,grid:{color:line},title:{display:true,text:T.hoursAxis}}}};
+  };
+  let dailyChart;
+  const drawDaily = () => {
+    if (dailyChart) { charts.splice(charts.indexOf(dailyChart),1); dailyChart.destroy(); }
+    const n = pick.value, a = new Array(days.length).fill(0);
+    SESSIONS.filter(s=>s.name===n).forEach(s=>a[dIdx(s.s)]+=s.min/60);
+    const o = base(); o.plugins.legend.display = false;
+    const c = color(n) === OTHER ? css("--accent") : color(n);
+    dailyChart = new Chart(document.getElementById("daily"),{type:"bar",data:{labels:dLabels,datasets:[{label:n,data:a,backgroundColor:c,borderRadius:2}]},options:o});
+    charts.push(dailyChart);
+  };
+  const draw = () => {
+    charts.splice(0).forEach(c=>c.destroy()); dailyChart = null;
+    const wo = base(); wo.scales.x.stacked = wo.scales.y.stacked = true;
+    charts.push(new Chart(document.getElementById("weekly"),{type:"bar",
+      data:{labels:weeks.map(fmtShort),datasets:series.map(n=>({label:n,data:wk[n],backgroundColor:n===T.other?OTHER:color(n),borderRadius:2}))},options:wo}));
+    const cum = TOP.map(n=>{ const a=new Array(days.length).fill(0); SESSIONS.filter(s=>s.name===n).forEach(s=>a[dIdx(s.s)]+=s.min/60); let t=0; return a.map(v=>t+=v); });
+    charts.push(new Chart(document.getElementById("cumul"),{type:"line",
+      data:{labels:dLabels,datasets:TOP.map((n,i)=>({label:n,data:cum[i],borderColor:color(n),backgroundColor:color(n),pointRadius:0,borderWidth:2,tension:.15}))},options:base()}));
+    drawDaily();
+  };
+  pick.addEventListener("change", drawDaily);
+  draw();
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+}
+</script>
+</body>
+</html>

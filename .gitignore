@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Reports and exports contain personal play history
+steam_playtime.html
+*.csv
+history.json

@@ -1,0 +1,22 @@
+[2026-01-05 10:00:00] Client version: 1700000000
+[2026-01-05 10:00:05] AppID 1000 adding PID 11 as a tracked process ""C:\Steam\steamapps\common\Alpha Game\alpha.exe""
+[2026-01-05 10:00:20] AppID 1000 adding PID 12 as a tracked process
+[2026-01-05 11:00:05] AppID 1000 no longer tracking PID 11, exit code 0
+[2026-01-05 11:30:05] AppID 1000 no longer tracking PID 12, exit code 0
+[2026-01-06 20:00:00] AppID 2000 adding PID 21 as a tracked process ""D:\SteamLibrary\steamapps\common\BetaDir\beta.exe""
+[2026-01-06 20:00:30] AppID 2000 no longer tracking PID 21, exit code 0
+[2026-01-06 21:00:00] AppID 3000 adding PID 31 as a tracked process ""D:\SteamLibrary\steamapps\common\Gamma Uninstalled\bin\gamma.exe""
+[2026-01-06 22:00:00] AppID 3000 no longer tracking PID 31, exit code 0
+[2026-01-07 18:00:00] AppID 480 adding PID 41 as a tracked process ""C:\Users\x\Downloads\Cool Indie\Binaries\Win64\CoolIndie.exe" "
+[2026-01-07 19:00:00] AppID 480 no longer tracking PID 41, exit code 0
+[2026-01-07 19:30:00] AppID 480 adding PID 42 as a tracked process
+[2026-01-07 19:45:00] AppID 480 no longer tracking PID 42, exit code 0
+[2026-01-08 15:00:00] AppID 1182480 adding PID 51 as a tracked process ""C:\Program Files\Electronic Arts\EA Desktop\EA Desktop\EASteamAuthHelper.exe" 123"
+[2026-01-08 17:00:00] AppID 1182480 no longer tracking PID 51, exit code 0
+[2026-01-08 15:00:00] AppID 431960 adding PID 52 as a tracked process
+[2026-01-08 23:00:00] AppID 431960 no longer tracking PID 52, exit code 0
+[2026-01-09 12:00:00] AppID 1000 adding PID 61 as a tracked process
+[2026-01-09 13:00:00] Client version: 1700000001
+[2026-01-09 13:00:10] AppID 1000 no longer tracking PID 61, exit code 0
+[2026-01-10 09:00:00] AppID 202355 adding PID 71 as a tracked process ""C:\Steam\streaming_client.exe" --gameid 311210"
+[2026-01-10 10:00:00] AppID 202355 no longer tracking PID 71, exit code 0
