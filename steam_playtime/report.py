@@ -5,21 +5,29 @@ import csv
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import Dict, List, Optional
 
+from . import __version__
 from .sessions import Session
 
 TEMPLATE = Path(__file__).with_name("template.html")
 
 
-def render_html(sessions: List[Session], out: Path, lang: str) -> None:
-    rows = [{"name": s.name, "start": s.start.isoformat(), "end": s.end.isoformat(), "min": round(s.minutes, 1)} for s in sessions]
-    data = json.dumps(rows, ensure_ascii=False).replace("</", "<\\/")
+def render_html(sessions: List[Session], out: Path, lang: str, totals: Optional[Dict[str, dict]] = None) -> None:
+    rows = [
+        {"app": s.app, "name": s.name, "start": s.start.isoformat(), "end": s.end.isoformat(), "min": round(s.minutes, 1)}
+        for s in sessions
+    ]
+    apps = {s.app for s in sessions}
+    lifetime = {app: t["minutes"] for app, t in (totals or {}).items() if app in apps and t.get("minutes")}
+    embed = lambda v: json.dumps(v, ensure_ascii=False).replace("</", "<\\/")
     html = (
         TEMPLATE.read_text(encoding="utf-8")
-        .replace("__DATA__", data)
-        .replace("__LANG__", json.dumps(lang))
-        .replace("__GENERATED__", json.dumps(datetime.now().isoformat(timespec="minutes")))
+        .replace("__DATA__", embed(rows))
+        .replace("__TOTALS__", embed(lifetime))
+        .replace("__LANG__", embed(lang))
+        .replace("__GENERATED__", embed(datetime.now().isoformat(timespec="minutes")))
+        .replace("__VERSION__", embed(__version__))
     )
     out.write_text(html, encoding="utf-8")
 

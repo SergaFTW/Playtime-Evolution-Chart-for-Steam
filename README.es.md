@@ -11,7 +11,11 @@ Mira cómo evoluciona tu tiempo de juego en Steam, juego a juego. `steam-playtim
 
 El perfil de Steam solo muestra un total por juego. Esto muestra *cuándo* jugaste.
 
-Todo se ejecuta en local. No se sube nada y no hace falta cuenta de Steam ni clave de API.
+![El informe, generado con datos de ejemplo](docs/report.png)
+
+El informe es un único fichero HTML. Elige el periodo (atajos o fechas exactas), cambia entre barras por día, semana o mes, sigue la curva acumulada de cada juego, consulta un calendario con los días jugados y ordena o filtra la tabla de juegos. Cada juego muestra además el total de por vida que guarda Steam, que incluye lo jugado antes de que empiece el historial de esta herramienta.
+
+Todo se ejecuta en local. No se sube nada y no hace falta cuenta de Steam ni clave de API. Para probarlo con datos inventados antes de leer los tuyos, ejecútalo con `--demo`.
 
 ## Cómo usarlo
 
@@ -60,6 +64,7 @@ El comando guarda `steam_playtime.html` en la carpeta actual y lo abre en el nav
 | `--no-history` | Usa solo lo que tienen ahora los logs de Steam |
 | `--csv FICHERO`, `--json FICHERO` | Exporta también todas las sesiones |
 | `--no-open` | No abre el navegador |
+| `--demo` | Genera el informe con datos de ejemplo inventados, sin tocar Steam |
 
 El AppID de un juego está en la URL de su página de la tienda: `store.steampowered.com/app/<AppID>/…`.
 

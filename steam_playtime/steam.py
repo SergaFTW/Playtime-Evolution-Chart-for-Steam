@@ -81,6 +81,56 @@ def installed_game_names(libraries: Iterable[Path]) -> Dict[str, str]:
     return names
 
 
+def _apps_blocks(text: str):
+    """Yield (appid, block_body) for every app entry in a localconfig.vdf 'apps' section."""
+    m = re.search(r'"apps"\s*\{', text, re.IGNORECASE)
+    if not m:
+        return
+    i, depth = m.end(), 1
+    start = i
+    while i < len(text) and depth:
+        c = text[i]
+        if c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+        i += 1
+    section = text[start : i - 1]
+    for app in re.finditer(r'"(\d+)"\s*\{', section):
+        j, d = app.end(), 1
+        while j < len(section) and d:
+            if section[j] == "{":
+                d += 1
+            elif section[j] == "}":
+                d -= 1
+            j += 1
+        yield app.group(1), section[app.end() : j - 1]
+
+
+def playtime_totals(steam_dir: Path) -> Dict[str, dict]:
+    """Lifetime minutes and last-played time per AppID, from every user's localconfig.vdf.
+
+    Steam keeps these totals forever, so they also cover play time from before
+    the session logs start. When several accounts exist, the largest total wins.
+    """
+    totals: Dict[str, dict] = {}
+    for vdf in (steam_dir / "userdata").glob("*/config/localconfig.vdf"):
+        try:
+            text = vdf.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        for app, body in _apps_blocks(text):
+            pt = re.search(r'"playtime"\s+"(\d+)"', body, re.IGNORECASE)
+            lp = re.search(r'"lastplayed"\s+"(\d+)"', body, re.IGNORECASE)
+            if not pt:
+                continue
+            entry = totals.setdefault(app, {"minutes": 0, "last_played": 0})
+            entry["minutes"] = max(entry["minutes"], int(pt.group(1)))
+            if lp:
+                entry["last_played"] = max(entry["last_played"], int(lp.group(1)))
+    return totals
+
+
 def process_logs(steam_dir: Path) -> List[Path]:
     """gameprocess_log files, oldest first (Steam rotates the old one to *.previous.txt)."""
     logs = list((steam_dir / "logs").glob("gameprocess_log*.txt"))

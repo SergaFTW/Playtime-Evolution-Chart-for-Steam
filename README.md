@@ -11,7 +11,11 @@ See how your Steam play time evolves, game by game. `steam-playtime` reads the s
 
 Steam's own profile only shows a total per game. This shows *when* you played.
 
-Everything runs locally. Nothing is uploaded and no Steam account or API key is needed.
+![The report, built from sample data](docs/report.png)
+
+The report is a single HTML file. Pick a period (presets or exact dates), switch between daily, weekly and monthly bars, follow each game's cumulative curve, check a calendar of played days, and sort or filter the games table. Each game also shows the lifetime total Steam keeps for it, which includes play from before this tool's history starts.
+
+Everything runs locally. Nothing is uploaded and no Steam account or API key is needed. To try it with invented data before reading your own, run it with `--demo`.
 
 ## How to use it
 
@@ -60,6 +64,7 @@ The command writes `steam_playtime.html` to the current folder and opens it in y
 | `--no-history` | Only use what Steam's logs hold right now |
 | `--csv FILE`, `--json FILE` | Also export every session |
 | `--no-open` | Don't open the browser |
+| `--demo` | Build the report from invented sample data, without touching Steam |
 
 Find an AppID in a game's Steam store URL: `store.steampowered.com/app/<AppID>/…`.
 

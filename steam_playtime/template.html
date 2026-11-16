@@ -5,213 +5,526 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Steam Playtime</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: one reading column; summary first, then weekly, cumulative, per-game detail, table */
+/* Wide data-tool layout: sticky filter bar, KPI strip, full-width activity chart,
+   cumulative + per-game detail side by side, calendar heatmap, sortable table. */
 :root{
-  --bg:#f3f5f8; --panel:#ffffff; --fg:#141a24; --muted:#5b6678; --line:#dde2ea; --accent:#2f6fde;
+  --bg:#f4f5f7; --panel:#ffffff; --panel2:#eceef2; --fg:#16181d; --muted:#626a78; --line:#dcdfe6;
+  --accent:#2563eb; --hover:#f0f3f8; --sel:#e4ecfb;
   --display:"Chakra Petch",system-ui,sans-serif; --body:"Inter",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+  --r:8px;
 }
-@media (prefers-color-scheme:dark){:root{--bg:#0f131a;--panel:#171c25;--fg:#e8ecf3;--muted:#8f9bb0;--line:#283041;--accent:#6aa0ff;color-scheme:dark}}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#14161b; --panel:#1b1e25; --panel2:#23262f; --fg:#e6e9ef; --muted:#8b93a3; --line:#2b2f3a;
+  --accent:#5b8def; --hover:#21242d; --sel:#243246; color-scheme:dark;
+}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;line-height:1.5}
-.wrap{max-width:1080px;margin:0 auto;padding:32px 16px 56px;display:flex;flex-direction:column;gap:28px}
-h1{font-family:var(--display);font-size:clamp(28px,5vw,40px);margin:0;letter-spacing:.01em;text-wrap:balance}
-h2{font-family:var(--display);font-size:20px;margin:0;font-weight:600}
-.sub{color:var(--muted);margin:6px 0 0;max-width:68ch}
-.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-@media (max-width:720px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
-.kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-.kpi .v{font-family:var(--display);font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.kpi .v small{font-size:14px;color:var(--muted);font-weight:500}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;line-height:1.45}
+.wrap{max-width:1440px;margin:0 auto;padding:0 20px 48px}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:26px 0 14px}
+h1{font-family:var(--display);font-size:26px;font-weight:700;margin:0;letter-spacing:.02em}
+#range{color:var(--muted);font-size:13px}
+header .spacer{flex:1}
+#gen{color:var(--muted);font-size:12px}
+
+.toolbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:10px 0;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.group{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--panel)}
+.group button{font:inherit;font-size:12.5px;padding:6px 11px;border:0;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap}
+.group button + button{border-left:1px solid var(--line)}
+.group button:hover{background:var(--hover);color:var(--fg)}
+.group button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.glabel{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 2px 0 6px}
+.dates{display:flex;align-items:center;gap:6px}
+input[type=date],input[type=search],select{font:inherit;font-size:13px;padding:6px 9px;border-radius:var(--r);
+  border:1px solid var(--line);background:var(--panel);color:var(--fg)}
+input[type=search]{min-width:200px}
+:is(input,select,button):focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.toolbar .push{flex:1}
+
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:18px 0}
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;min-width:0}
+.kpi .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.kpi .v{font-family:var(--display);font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .v small{font-size:13px;color:var(--muted);font-weight:500}
 .kpi .n{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-section{display:flex;flex-direction:column;gap:12px}
-.head{display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap}
-.hint{font-size:13px;color:var(--muted);margin:0}
-.chart{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;position:relative;height:360px}
-@media (max-width:600px){.chart{height:300px}}
-select{font:inherit;font-size:14px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);max-width:100%}
-select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.tbl{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px}
-table{border-collapse:collapse;width:100%;min-width:620px}
-th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line)}
-th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
-td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
-tr:last-child td{border-bottom:none}
-.dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:8px;vertical-align:middle}
-.bar{height:6px;border-radius:3px;opacity:.8}
-.note{font-size:13px;color:var(--muted);max-width:75ch}
-.err{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+
+section{margin:22px 0}
+.shead{display:flex;align-items:baseline;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+h2{font-family:var(--display);font-size:16px;font-weight:600;margin:0;letter-spacing:.02em}
+.hint{font-size:12.5px;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.chart{position:relative;height:340px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:1000px){.cols{grid-template-columns:1fr}}
+.cols .chart{height:300px}
+
+.dstats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.chip{background:var(--panel2);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--muted)}
+.chip b{color:var(--fg);font-family:var(--mono);font-weight:600;font-size:12.5px}
+.dhead{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.dhead img{height:44px;border-radius:5px;display:block}
+
+.hm{overflow-x:auto;padding-bottom:4px}
+.hm-inner{display:inline-flex;flex-direction:column;gap:4px}
+.hm-months{display:flex;font-size:10.5px;color:var(--muted);margin-left:30px}
+.hm-body{display:flex;gap:8px}
+.hm-days{display:grid;grid-template-rows:repeat(7,12px);gap:3px;font-size:10px;color:var(--muted);width:22px}
+.hm-grid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,12px);gap:3px}
+.hm-cell{width:12px;height:12px;border-radius:2.5px;background:var(--panel2)}
+.hm-scale{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);margin:8px 0 0 30px}
+.hm-scale span.hm-cell{width:11px;height:11px}
+
+.tblwrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;min-width:980px}
+th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;
+  position:sticky;top:0;background:var(--panel);cursor:pointer;user-select:none}
+th:hover{color:var(--fg)}
+th .arr{font-family:var(--mono)}
+td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--hover)}
+tbody tr.on{background:var(--sel)}
+tbody tr:last-child td{border-bottom:none}
+.gcell{display:flex;align-items:center;gap:10px;min-width:0}
+.cap{width:69px;height:26px;border-radius:4px;object-fit:cover;flex:none;background:var(--panel2)}
+.mono-cap{width:69px;height:26px;border-radius:4px;flex:none;display:flex;align-items:center;justify-content:center;
+  font-family:var(--display);font-size:11px;font-weight:700;color:#fff;letter-spacing:.05em}
+.gname{overflow:hidden;text-overflow:ellipsis;max-width:320px}
+.tag{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border:1px solid var(--line);
+  border-radius:4px;padding:1px 5px;margin-left:8px;vertical-align:1px}
+.share{display:flex;align-items:center;gap:8px}
+.share .track{display:block;width:110px;height:5px;border-radius:3px;background:var(--panel2);overflow:hidden;flex:none}
+.share .fill{display:block;height:100%;border-radius:3px}
+.share .pct{font-family:var(--mono);font-size:12px;color:var(--muted);width:38px;text-align:right}
+
+footer{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;
+  display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between}
+footer p{margin:0;max-width:90ch}
+.offline{padding:28px;text-align:center;color:var(--muted)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <h1 data-t="title"></h1>
-    <p class="sub" id="range"></p>
+    <span id="range"></span>
+    <span class="spacer"></span>
+    <span id="gen"></span>
   </header>
+
+  <div class="toolbar">
+    <span class="glabel" data-t="period"></span>
+    <div class="group" id="presets"></div>
+    <div class="dates">
+      <input type="date" id="from" aria-label="from">
+      <span class="hint">–</span>
+      <input type="date" id="to" aria-label="to">
+    </div>
+    <span class="glabel" data-t="granularity"></span>
+    <div class="group" id="grans"></div>
+    <span class="push"></span>
+    <input type="search" id="q" autocomplete="off">
+  </div>
 
   <div class="kpis" id="kpis"></div>
 
   <section>
-    <div class="head"><h2 data-t="weekly"></h2><p class="hint" data-t="legendHint"></p></div>
-    <div class="chart"><canvas id="weekly"></canvas></div>
+    <div class="shead"><h2 data-t="activity"></h2><span class="hint" id="actHint"></span></div>
+    <div class="panel chart" id="actPanel"><canvas id="activity"></canvas></div>
+  </section>
+
+  <div class="cols">
+    <section>
+      <div class="shead"><h2 data-t="cumulative"></h2><span class="hint" data-t="cumHint"></span></div>
+      <div class="panel chart"><canvas id="cumul"></canvas></div>
+    </section>
+    <section>
+      <div class="shead"><h2 data-t="detail"></h2><span class="push" style="flex:1"></span><select id="pick"></select></div>
+      <div class="panel">
+        <div class="dhead" id="dhead"></div>
+        <div class="dstats" id="dstats"></div>
+        <div class="chart" style="height:190px"><canvas id="daily"></canvas></div>
+      </div>
+    </section>
+  </div>
+
+  <section>
+    <div class="shead"><h2 data-t="calendar"></h2><span class="hint" id="calHint"></span></div>
+    <div class="panel hm" id="heat"></div>
   </section>
 
   <section>
-    <div class="head"><h2 data-t="cumulative"></h2></div>
-    <div class="chart"><canvas id="cumul"></canvas></div>
-  </section>
-
-  <section>
-    <div class="head"><h2 data-t="perGame"></h2><select id="pick"></select></div>
-    <div class="chart"><canvas id="daily"></canvas></div>
-  </section>
-
-  <section>
-    <h2 data-t="allGames"></h2>
-    <div class="tbl"><table>
-      <thead><tr><th data-t="game"></th><th class="num" data-t="hours"></th><th style="width:22%"></th><th class="num" data-t="sessions"></th><th class="num" data-t="avg"></th><th data-t="first"></th><th data-t="last"></th></tr></thead>
+    <div class="shead"><h2 data-t="allGames"></h2><span class="hint" id="tblHint"></span></div>
+    <div class="tblwrap"><table>
+      <thead><tr id="thead"></tr></thead>
       <tbody id="rows"></tbody>
     </table></div>
   </section>
 
-  <p class="note" id="note"></p>
+  <footer>
+    <p id="note"></p>
+    <p style="white-space:nowrap">steam-playtime v<span id="ver"></span> ·
+      <a href="https://github.com/SergaFTW/Playtime-Evolution-Chart-for-Steam" target="_blank" rel="noopener">GitHub</a></p>
+  </footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
+"use strict";
 const SESSIONS = __DATA__;
+const LIFETIME = __TOTALS__;   // appid -> lifetime minutes recorded by Steam (includes pre-log play)
 const LANG = __LANG__;
 const GENERATED = __GENERATED__;
+const VERSION = __VERSION__;
 
 const I18N = {
   en: {
-    locale: "en-GB", title: "Steam playtime",
-    range: (a,b) => `Play sessions recorded by Steam from ${a} to ${b}.`,
-    total: "Total time", games: n => `${n} games`, sessions: "Sessions", activeDays: n => `${n} days played`,
-    top: "Most played", ofTotal: p => `${p}% of total`, longest: "Longest session",
-    weekly: "Hours per week", legendHint: "Click a game in the legend to hide it", cumulative: "Cumulative hours",
-    perGame: "Per-game detail", pickLabel: "Choose a game", allGames: "All games", game: "Game", hours: "Hours",
-    avg: "Average", first: "First", last: "Last", other: "Other", hoursAxis: "hours", min: "min", h: "h",
-    noChart: "The charts need an internet connection to load Chart.js. The table below still works offline.",
-    note: g => `Source: Steam's gameprocess_log, which records when each game launched through Steam starts and stops. Games from other launchers are not included. Sessions without a recorded end (Steam closed abruptly) are skipped. Generated ${g}.`,
+    locale:"en-GB", title:"Steam playtime", period:"Period", granularity:"Scale",
+    presets:[["all","All"],["year","This year"],["90","90 days"],["30","30 days"]],
+    grans:[["auto","Auto"],["day","Day"],["week","Week"],["month","Month"]],
+    searchPh:"Filter games…",
+    kTotal:"Play time", kSessions:"Sessions", kDays:"Days played", kAvg:"Per played day",
+    kTop:"Most played", kLongest:"Longest session",
+    activity:"Activity", cumulative:"Cumulative hours", cumHint:"Top games, click the legend to toggle",
+    detail:"Game detail", calendar:"Calendar", allGames:"Games",
+    actHints:{day:"hours per day",week:"hours per week",month:"hours per month"},
+    dHours:"Hours", dSessions:"Sessions", dAvg:"Avg session", dLongest:"Longest", dDays:"Days",
+    dLast:"Last played", dLifetime:"Steam lifetime",
+    cols:[["name","Game"],["hours","Hours"],["share","Share"],["sessions","Sessions"],["avg","Avg"],
+          ["longest","Longest"],["lifetime","Steam total"],["first","First"],["last","Last"]],
+    external:"non-Steam", less:"Less", more:"More",
+    ofDays:(a,b)=>`${a} of ${b} days`, games:n=>`${n} games`, visible:(a,b)=>`${a} of ${b} games shown`,
+    range:(a,b)=>`${a} – ${b}`, h:"h", min:"min", perWeek:"/week",
+    lifetimeHint:"“Steam total” is the lifetime play time Steam records per game, including time before this tool's history starts.",
+    offline:"Charts need an internet connection (Chart.js). The table below works offline.",
+    note:g=>`Built from Steam's local session log (gameprocess_log). Games launched outside Steam appear when Steam tracked them; other launchers are not included. Sessions without a recorded end are skipped. Generated ${g}.`,
+    empty:"No sessions in this period.",
   },
   es: {
-    locale: "es-ES", title: "Mis horas en Steam",
-    range: (a,b) => `Sesiones de juego registradas por Steam entre el ${a} y el ${b}.`,
-    total: "Tiempo total", games: n => `${n} juegos`, sessions: "Sesiones", activeDays: n => `${n} días con partida`,
-    top: "Más jugado", ofTotal: p => `${p} % del total`, longest: "Sesión más larga",
-    weekly: "Horas por semana", legendHint: "Pulsa un juego en la leyenda para ocultarlo", cumulative: "Horas acumuladas",
-    perGame: "Detalle por juego", pickLabel: "Elegir juego", allGames: "Todos los juegos", game: "Juego", hours: "Horas",
-    avg: "Media", first: "Primera", last: "Última", other: "Otros", hoursAxis: "horas", min: "min", h: "h",
-    noChart: "Los gráficos necesitan conexión a internet para cargar Chart.js. La tabla funciona sin conexión.",
-    note: g => `Fuente: gameprocess_log de Steam, que registra cuándo empieza y termina cada juego lanzado desde Steam. No incluye juegos de otros launchers. Las sesiones sin cierre registrado (Steam se cerró de golpe) se descartan. Generado el ${g}.`,
+    locale:"es-ES", title:"Mis horas en Steam", period:"Periodo", granularity:"Escala",
+    presets:[["all","Todo"],["year","Este año"],["90","90 días"],["30","30 días"]],
+    grans:[["auto","Auto"],["day","Día"],["week","Semana"],["month","Mes"]],
+    searchPh:"Filtrar juegos…",
+    kTotal:"Tiempo jugado", kSessions:"Sesiones", kDays:"Días con partida", kAvg:"Por día jugado",
+    kTop:"Más jugado", kLongest:"Sesión más larga",
+    activity:"Actividad", cumulative:"Horas acumuladas", cumHint:"Juegos principales, pulsa la leyenda para ocultar",
+    detail:"Detalle de juego", calendar:"Calendario", allGames:"Juegos",
+    actHints:{day:"horas por día",week:"horas por semana",month:"horas por mes"},
+    dHours:"Horas", dSessions:"Sesiones", dAvg:"Sesión media", dLongest:"Más larga", dDays:"Días",
+    dLast:"Última partida", dLifetime:"Total en Steam",
+    cols:[["name","Juego"],["hours","Horas"],["share","Peso"],["sessions","Sesiones"],["avg","Media"],
+          ["longest","Más larga"],["lifetime","Total Steam"],["first","Primera"],["last","Última"]],
+    external:"fuera de Steam", less:"Menos", more:"Más",
+    ofDays:(a,b)=>`${a} de ${b} días`, games:n=>`${n} juegos`, visible:(a,b)=>`${a} de ${b} juegos`,
+    range:(a,b)=>`${a} – ${b}`, h:"h", min:"min", perWeek:"/sem",
+    lifetimeHint:"«Total Steam» es el tiempo de por vida que Steam guarda por juego, incluido el anterior al historial de esta herramienta.",
+    offline:"Los gráficos necesitan conexión a internet (Chart.js). La tabla funciona sin conexión.",
+    note:g=>`Generado a partir del registro local de sesiones de Steam (gameprocess_log). Los juegos lanzados fuera de Steam aparecen cuando Steam los registró; otros launchers no se incluyen. Las sesiones sin cierre registrado se descartan. Generado el ${g}.`,
+    empty:"No hay sesiones en este periodo.",
   },
 };
 const T = I18N[LANG] || I18N.en;
 document.documentElement.lang = LANG;
 document.title = T.title;
 document.querySelectorAll("[data-t]").forEach(el => { el.textContent = T[el.dataset.t]; });
-document.getElementById("pick").setAttribute("aria-label", T.pickLabel);
+document.getElementById("q").placeholder = T.searchPh;
+document.getElementById("ver").textContent = VERSION;
+document.getElementById("note").textContent = T.note(new Date(GENERATED).toLocaleString(T.locale)) + " " + T.lifetimeHint;
+document.getElementById("gen").textContent = new Date(GENERATED).toLocaleDateString(T.locale,{day:"numeric",month:"short",year:"numeric"});
 
-const PALETTE = ["#3b82f6","#f59e0b","#10b981","#ef4444","#8b5cf6","#06b6d4","#ec4899","#84cc16"];
-const OTHER = "#94a3b8";
-const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+/* ---------- data ---------- */
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const MS_DAY = 864e5;
+const midnight = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const addDays = (d,n) => new Date(d.getFullYear(), d.getMonth(), d.getDate()+n);
+const monday = d => addDays(midnight(d), -((d.getDay()+6)%7));
 const fmtH = m => (m/60).toLocaleString(T.locale,{maximumFractionDigits:1});
 const fmtD = d => d.toLocaleDateString(T.locale,{day:"numeric",month:"short",year:"numeric"});
 const fmtShort = d => d.toLocaleDateString(T.locale,{day:"numeric",month:"short"});
-const dayKey = d => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-const midnight = d => new Date(d.getFullYear(),d.getMonth(),d.getDate());
-const addDays = (d,n) => new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);
 
 SESSIONS.forEach(s => { s.s = new Date(s.start); s.e = new Date(s.end); });
+SESSIONS.sort((a,b)=>a.s-b.s);
+const MIN_DATE = midnight(SESSIONS[0].s), MAX_DATE = midnight(SESSIONS[SESSIONS.length-1].e);
 
-const games = {};
-SESSIONS.forEach(s => {
-  const g = games[s.name] ||= {name:s.name,min:0,n:0,first:s.s,last:s.e};
-  g.min += s.min; g.n++; if (s.s < g.first) g.first = s.s; if (s.e > g.last) g.last = s.e;
-});
-const ranked = Object.values(games).sort((a,b)=>b.min-a.min);
-const TOP = ranked.slice(0,8).map(g=>g.name);
-const color = n => { const i = TOP.indexOf(n); return i>=0 ? PALETTE[i] : OTHER; };
-
-const start = new Date(Math.min(...SESSIONS.map(s=>s.s))), end = new Date(Math.max(...SESSIONS.map(s=>s.e)));
-const totalMin = ranked.reduce((a,g)=>a+g.min,0);
-const activeDays = new Set(SESSIONS.map(s=>dayKey(s.s))).size;
-const longest = SESSIONS.reduce((a,s)=>s.min>a.min?s:a);
-document.getElementById("range").textContent = T.range(fmtD(start), fmtD(end));
-document.getElementById("note").textContent = T.note(new Date(GENERATED).toLocaleString(T.locale));
-document.getElementById("kpis").innerHTML = [
-  [T.total, `${fmtH(totalMin)}<small> ${T.h}</small>`, T.games(ranked.length)],
-  [T.sessions, SESSIONS.length, T.activeDays(activeDays)],
-  [T.top, esc(ranked[0].name), `${fmtH(ranked[0].min)} ${T.h} · ${T.ofTotal(Math.round(ranked[0].min/totalMin*100))}`],
-  [T.longest, `${fmtH(longest.min)}<small> ${T.h}</small>`, `${esc(longest.name)} · ${fmtD(longest.s)}`],
-].map(([l,v,n])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="n" title="${n}">${n}</div></div>`).join("");
-
-const maxMin = ranked[0].min;
-document.getElementById("rows").innerHTML = ranked.map(g=>`<tr>
-  <td><span class="dot" style="background:${color(g.name)}"></span>${esc(g.name)}</td>
-  <td class="num">${fmtH(g.min)}</td>
-  <td><div class="bar" style="width:${Math.max(1,g.min/maxMin*100)}%;background:${color(g.name)}"></div></td>
-  <td class="num">${g.n}</td>
-  <td class="num">${Math.round(g.min/g.n)} ${T.min}</td>
-  <td>${fmtD(g.first)}</td><td>${fmtD(g.last)}</td></tr>`).join("");
-
-const pick = document.getElementById("pick");
-pick.innerHTML = ranked.map(g=>`<option>${esc(g.name)}</option>`).join("");
-
-if (typeof Chart === "undefined") {
-  document.querySelectorAll(".chart").forEach(c => { c.style.height = "auto"; c.innerHTML = `<p class="hint">${T.noChart}</p>`; });
-} else {
-  // weeks start on Monday
-  const monday = d => addDays(midnight(d), -((d.getDay()+6)%7));
-  const weeks = []; for (let w = monday(start); w <= end; w = addDays(w,7)) weeks.push(w);
-  const wIdx = d => Math.round((monday(d)-weeks[0])/(7*864e5));
-  const others = ranked.length > TOP.length;
-  const series = others ? [...TOP, T.other] : [...TOP];
-  const wk = Object.fromEntries(series.map(n=>[n,new Array(weeks.length).fill(0)]));
-  SESSIONS.forEach(s => { const k = TOP.includes(s.name)?s.name:T.other; wk[k][wIdx(s.s)] += s.min/60; });
-
-  const days = []; for (let d = midnight(start); d <= end; d = addDays(d,1)) days.push(d);
-  const dIdx = d => Math.round((midnight(d)-days[0])/864e5);
-  const dLabels = days.map(fmtShort);
-
-  const charts = [];
-  const base = () => {
-    const fg = css("--fg"), line = css("--line");
-    Chart.defaults.color = css("--muted"); Chart.defaults.font.family = "Inter, system-ui, sans-serif"; Chart.defaults.borderColor = line;
-    return {maintainAspectRatio:false,responsive:true,interaction:{mode:"index",intersect:false},
-      plugins:{legend:{position:"bottom",labels:{boxWidth:10,boxHeight:10,color:fg,padding:12}},
-        tooltip:{itemSort:(a,b)=>b.raw-a.raw,filter:i=>i.raw>0.05,callbacks:{label:c=>` ${c.dataset.label}: ${c.raw.toLocaleString(T.locale,{maximumFractionDigits:1})} ${T.h}`}}},
-      scales:{x:{grid:{display:false},ticks:{maxRotation:0,autoSkipPadding:14}},y:{beginAtZero:true,grid:{color:line},title:{display:true,text:T.hoursAxis}}}};
-  };
-  let dailyChart;
-  const drawDaily = () => {
-    if (dailyChart) { charts.splice(charts.indexOf(dailyChart),1); dailyChart.destroy(); }
-    const n = pick.value, a = new Array(days.length).fill(0);
-    SESSIONS.filter(s=>s.name===n).forEach(s=>a[dIdx(s.s)]+=s.min/60);
-    const o = base(); o.plugins.legend.display = false;
-    const c = color(n) === OTHER ? css("--accent") : color(n);
-    dailyChart = new Chart(document.getElementById("daily"),{type:"bar",data:{labels:dLabels,datasets:[{label:n,data:a,backgroundColor:c,borderRadius:2}]},options:o});
-    charts.push(dailyChart);
-  };
-  const draw = () => {
-    charts.splice(0).forEach(c=>c.destroy()); dailyChart = null;
-    const wo = base(); wo.scales.x.stacked = wo.scales.y.stacked = true;
-    charts.push(new Chart(document.getElementById("weekly"),{type:"bar",
-      data:{labels:weeks.map(fmtShort),datasets:series.map(n=>({label:n,data:wk[n],backgroundColor:n===T.other?OTHER:color(n),borderRadius:2}))},options:wo}));
-    const cum = TOP.map(n=>{ const a=new Array(days.length).fill(0); SESSIONS.filter(s=>s.name===n).forEach(s=>a[dIdx(s.s)]+=s.min/60); let t=0; return a.map(v=>t+=v); });
-    charts.push(new Chart(document.getElementById("cumul"),{type:"line",
-      data:{labels:dLabels,datasets:TOP.map((n,i)=>({label:n,data:cum[i],borderColor:color(n),backgroundColor:color(n),pointRadius:0,borderWidth:2,tension:.15}))},options:base()}));
-    drawDaily();
-  };
-  pick.addEventListener("change", drawDaily);
-  draw();
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+// Per-game aggregates over the whole history (colors and ranking stay stable while filtering)
+const ALL = {};
+for (const s of SESSIONS) {
+  const g = ALL[s.name] ||= {name:s.name, app:s.app, min:0};
+  g.min += s.min;
 }
+const RANKED_ALL = Object.values(ALL).sort((a,b)=>b.min-a.min);
+const PALETTE = ["#4f8df0","#e8a33d","#4cba7c","#e06060","#9b7bea","#46b8c8","#d170b4","#97b13d"];
+const GRAY = "#8b93a3";
+let COLOR = {};  // reassigned per render so the visible top games always get distinct colors
+const isExternal = g => g.app === "480" || g.name === "Steam Remote Play";
+const capsule = app => `https://cdn.cloudflare.steamstatic.com/steam/apps/${app}/capsule_231x87.jpg`;
+const headerImg = app => `https://cdn.cloudflare.steamstatic.com/steam/apps/${app}/header.jpg`;
+
+/* ---------- state ---------- */
+const state = { from: MIN_DATE, to: MAX_DATE, gran: "auto", pick: RANKED_ALL[0].name, q: "", preset: "all",
+                sort: {k:"hours", dir:-1} };
+const inRange = s => s.s >= state.from && s.s < addDays(state.to,1);
+const effGran = () => {
+  if (state.gran !== "auto") return state.gran;
+  const span = (state.to - state.from)/MS_DAY;
+  return span <= 70 ? "day" : span <= 430 ? "week" : "month";
+};
+
+/* ---------- toolbar ---------- */
+const mkGroup = (el, items, cur, fn) => {
+  el.innerHTML = items.map(([k,label])=>`<button type="button" data-k="${k}" aria-pressed="${k===cur()}">${label}</button>`).join("");
+  el.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    fn(b.dataset.k);
+    el.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", x.dataset.k===cur()));
+  });
+};
+const fromEl = document.getElementById("from"), toEl = document.getElementById("to");
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const syncDates = () => { fromEl.value = iso(state.from); toEl.value = iso(state.to); };
+fromEl.min = toEl.min = iso(MIN_DATE); fromEl.max = toEl.max = iso(MAX_DATE);
+syncDates();
+
+mkGroup(document.getElementById("presets"), T.presets, ()=>state.preset, k => {
+  state.preset = k;
+  if (k==="all") { state.from = MIN_DATE; state.to = MAX_DATE; }
+  else if (k==="year") { state.from = new Date(MAX_DATE.getFullYear(),0,1); state.to = MAX_DATE; }
+  else { state.to = MAX_DATE; state.from = addDays(MAX_DATE, -Number(k)+1); }
+  if (state.from < MIN_DATE) state.from = MIN_DATE;
+  syncDates(); render();
+});
+mkGroup(document.getElementById("grans"), T.grans, ()=>state.gran, k => { state.gran = k; render(); });
+const clearPreset = () => { state.preset=""; document.querySelectorAll("#presets button").forEach(x=>x.setAttribute("aria-pressed","false")); };
+fromEl.addEventListener("change", ()=>{ const d=fromEl.valueAsDate; if(d){ state.from=midnight(d); if(state.from>state.to){state.to=state.from;syncDates();} clearPreset(); render(); }});
+toEl.addEventListener("change", ()=>{ const d=toEl.valueAsDate; if(d){ state.to=midnight(d); if(state.to<state.from){state.from=state.to;syncDates();} clearPreset(); render(); }});
+document.getElementById("q").addEventListener("input", e => { state.q = e.target.value.trim().toLowerCase(); renderTable(window.__agg||[]); });
+
+/* ---------- charts ---------- */
+const HAS_CHART = typeof Chart !== "undefined";
+if (!HAS_CHART) document.querySelectorAll(".chart").forEach(c => { c.classList.remove("chart"); c.innerHTML = `<div class="offline">${T.offline}</div>`; });
+let charts = [];
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const baseOpts = () => {
+  Chart.defaults.color = css("--muted");
+  Chart.defaults.font.family = "Inter, system-ui, sans-serif";
+  Chart.defaults.font.size = 11.5;
+  return {maintainAspectRatio:false, responsive:true, interaction:{mode:"index",intersect:false}, animation:{duration:220},
+    plugins:{legend:{position:"bottom",labels:{boxWidth:9,boxHeight:9,color:css("--fg"),padding:10}},
+      tooltip:{backgroundColor:css("--panel2"),titleColor:css("--fg"),bodyColor:css("--fg"),borderColor:css("--line"),borderWidth:1,
+        padding:10,itemSort:(a,b)=>b.raw-a.raw,filter:i=>i.raw>0.05,
+        callbacks:{label:c=>` ${c.dataset.label}: ${c.raw.toLocaleString(T.locale,{maximumFractionDigits:1})} ${T.h}`}}},
+    scales:{x:{grid:{display:false},border:{color:css("--line")},ticks:{maxRotation:0,autoSkipPadding:16}},
+            y:{beginAtZero:true,grid:{color:css("--line")},border:{display:false}}}};
+};
+
+function buckets() {
+  const g = effGran();
+  const out = [];
+  if (g==="day")   for (let d=midnight(state.from); d<=state.to; d=addDays(d,1)) out.push(d);
+  if (g==="week")  for (let d=monday(state.from); d<=state.to; d=addDays(d,7)) out.push(d);
+  if (g==="month") for (let d=new Date(state.from.getFullYear(),state.from.getMonth(),1); d<=state.to; d=new Date(d.getFullYear(),d.getMonth()+1,1)) out.push(d);
+  const idx = g==="day" ? d=>Math.round((midnight(d)-out[0])/MS_DAY)
+            : g==="week" ? d=>Math.round((monday(d)-out[0])/(7*MS_DAY))
+            : d=>(d.getFullYear()-out[0].getFullYear())*12 + d.getMonth()-out[0].getMonth();
+  const label = g==="month" ? d=>d.toLocaleDateString(T.locale,{month:"short",year:"2-digit"}) : fmtShort;
+  return {list:out, idx, label, g};
+}
+
+function render() {
+  const rows = SESSIONS.filter(inRange);
+  const agg = {};
+  for (const s of rows) {
+    const g = agg[s.name] ||= {name:s.name, app:s.app, min:0, n:0, longest:0, first:s.s, last:s.e, days:new Set()};
+    g.min += s.min; g.n++; g.longest = Math.max(g.longest, s.min);
+    if (s.s < g.first) g.first = s.s;
+    if (s.e > g.last) g.last = s.e;
+    g.days.add(midnight(s.s).getTime());
+  }
+  const ranked = Object.values(agg).sort((a,b)=>b.min-a.min);
+  window.__agg = ranked;
+  const top = ranked.slice(0,8).map(g=>g.name);
+  COLOR = {};
+  ranked.forEach((g,i)=>{ COLOR[g.name] = i<PALETTE.length ? PALETTE[i] : GRAY; });
+
+  document.getElementById("range").textContent = T.range(fmtD(state.from), fmtD(state.to));
+  renderKpis(rows, ranked);
+  renderHeat(rows);
+  if (!ranked.some(g=>g.name===state.pick)) state.pick = ranked.length ? ranked[0].name : "";
+  renderPick(ranked);
+  renderTable(ranked);
+
+  if (!HAS_CHART) return;
+  charts.splice(0).forEach(c=>c.destroy());
+  if (!rows.length) { document.getElementById("actHint").textContent = T.empty; return; }
+
+  const B = buckets();
+  document.getElementById("actHint").textContent = T.actHints[B.g];
+  const other = ranked.length > top.length ? "__other" : null;
+  const series = other ? [...top, other] : [...top];
+  const acc = Object.fromEntries(series.map(n=>[n, new Array(B.list.length).fill(0)]));
+  for (const s of rows) (acc[top.includes(s.name)?s.name:other] || acc[top[0]])[B.idx(s.s)] += s.min/60;
+  const o1 = baseOpts(); o1.scales.x.stacked = o1.scales.y.stacked = true;
+  charts.push(new Chart(document.getElementById("activity"), {type:"bar",
+    data:{labels:B.list.map(B.label), datasets:series.map(n=>({label:n===other?(LANG==="es"?"Otros":"Other"):n,
+      data:acc[n], backgroundColor:n===other?"#8b93a3":COLOR[n], borderRadius:2, stack:"s", maxBarThickness:36}))},
+    options:o1}));
+
+  const days = []; for (let d=midnight(state.from); d<=state.to; d=addDays(d,1)) days.push(d);
+  const dIdx = d => Math.round((midnight(d)-days[0])/MS_DAY);
+  const cum = top.map(n=>{ const a=new Array(days.length).fill(0);
+    rows.forEach(s=>{ if(s.name===n) a[dIdx(s.s)]+=s.min/60; }); let t=0; return a.map(v=>+(t+=v).toFixed(2)); });
+  charts.push(new Chart(document.getElementById("cumul"), {type:"line",
+    data:{labels:days.map(fmtShort), datasets:top.map((n,i)=>({label:n, data:cum[i], borderColor:COLOR[n],
+      backgroundColor:COLOR[n], pointRadius:0, pointHitRadius:6, borderWidth:1.8, tension:.15}))},
+    options:baseOpts()}));
+
+  renderDetail(rows, agg[state.pick], days, dIdx);
+}
+
+function renderKpis(rows, ranked) {
+  const total = ranked.reduce((a,g)=>a+g.min,0);
+  const dayset = new Set(rows.map(s=>midnight(s.s).getTime()));
+  const spanDays = Math.round((state.to-state.from)/MS_DAY)+1;
+  const longest = rows.length ? rows.reduce((a,s)=>s.min>a.min?s:a) : null;
+  const avg = dayset.size ? total/dayset.size : 0;
+  const k = (l,v,n) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="n" title="${esc(n)}">${n}</div></div>`;
+  document.getElementById("kpis").innerHTML =
+    k(T.kTotal, `${fmtH(total)}<small> ${T.h}</small>`, T.games(ranked.length)) +
+    k(T.kSessions, rows.length, rows.length ? `≈ ${(rows.length/Math.max(1,spanDays/7)).toLocaleString(T.locale,{maximumFractionDigits:1})} ${T.perWeek}` : "—") +
+    k(T.kDays, dayset.size, T.ofDays(dayset.size, spanDays)) +
+    k(T.kAvg, `${fmtH(avg)}<small> ${T.h}</small>`, "") +
+    k(T.kTop, ranked.length?`<span title="${esc(ranked[0].name)}">${esc(ranked[0].name)}</span>`:"—", ranked.length?`${fmtH(ranked[0].min)} ${T.h} · ${Math.round(ranked[0].min/total*100)}%`:"") +
+    k(T.kLongest, longest?`${fmtH(longest.min)}<small> ${T.h}</small>`:"—", longest?`${esc(longest.name)} · ${fmtD(longest.s)}`:"");
+}
+
+/* ---------- per-game detail ---------- */
+function renderPick(ranked) {
+  const pick = document.getElementById("pick");
+  pick.innerHTML = ranked.map(g=>`<option${g.name===state.pick?" selected":""}>${esc(g.name)}</option>`).join("");
+  pick.onchange = () => { state.pick = pick.value; render(); };
+}
+function renderDetail(rows, g, days, dIdx) {
+  const head = document.getElementById("dhead"), stats = document.getElementById("dstats");
+  if (!g) { head.innerHTML=""; stats.innerHTML=""; return; }
+  const ext = isExternal(g);
+  head.innerHTML = ext
+    ? `<div class="mono-cap" style="height:44px;width:100px;background:${COLOR[g.name]}">${esc(initials(g.name))}</div><strong>${esc(g.name)}</strong><span class="tag">${T.external}</span>`
+    : `<img src="${headerImg(g.app)}" alt="" onerror="this.remove()"><strong>${esc(g.name)}</strong>`;
+  const life = LIFETIME[g.app];
+  const chip = (l,v) => `<span class="chip">${l} <b>${v}</b></span>`;
+  stats.innerHTML =
+    chip(T.dHours, fmtH(g.min)+" "+T.h) + chip(T.dSessions, g.n) +
+    chip(T.dAvg, Math.round(g.min/g.n)+" "+T.min) + chip(T.dLongest, fmtH(g.longest)+" "+T.h) +
+    chip(T.dDays, g.days.size) + chip(T.dLast, fmtD(g.last)) +
+    (life && !ext ? chip(T.dLifetime, fmtH(life)+" "+T.h) : "");
+  if (!HAS_CHART) return;
+  const a = new Array(days.length).fill(0);
+  rows.forEach(s=>{ if(s.name===g.name) a[dIdx(s.s)]+=s.min/60; });
+  const o = baseOpts(); o.plugins.legend.display=false;
+  charts.push(new Chart(document.getElementById("daily"), {type:"bar",
+    data:{labels:days.map(fmtShort), datasets:[{label:g.name, data:a, backgroundColor:COLOR[g.name], borderRadius:2}]},
+    options:o}));
+}
+const initials = n => (n.replace(/[^\p{L}\p{N}\s]/gu," ").trim().split(/\s+/).map(w=>w[0]).join("").slice(0,3) || n[0]).toUpperCase();
+
+/* ---------- calendar heatmap ---------- */
+function renderHeat(rows) {
+  const el = document.getElementById("heat");
+  const perDay = new Map();
+  for (const s of rows) {
+    const k = midnight(s.s).getTime();
+    perDay.set(k, (perDay.get(k)||0) + s.min);
+  }
+  const start = monday(state.from), end = state.to;
+  const weeks = Math.ceil((addDays(end,1)-start)/(7*MS_DAY));
+  const max = Math.max(1, ...perDay.values());
+  const lvl = m => m<=0?0 : m<max*.25?1 : m<max*.5?2 : m<max*.75?3 : 4;
+  const alpha = [0,.22,.45,.7,1];
+  const accent = css("--accent");
+  const dows = LANG==="es" ? ["L","","X","","V","",""] : ["M","","W","","F","",""];
+  let months = "", cells = "", lastM = -1;
+  for (let w=0; w<weeks; w++) {
+    const d0 = addDays(start, w*7);
+    const m = d0.getMonth();
+    months += `<span style="width:15px;flex:none;overflow:visible;white-space:nowrap">${m!==lastM?d0.toLocaleDateString(T.locale,{month:"short"}):""}</span>`;
+    lastM = m;
+  }
+  for (let w=0; w<weeks; w++) for (let dow=0; dow<7; dow++) {
+    const d = addDays(start, w*7+dow);
+    if (d < state.from || d > end) { cells += `<span class="hm-cell" style="opacity:.35"></span>`; continue; }
+    const m = perDay.get(d.getTime())||0, L = lvl(m);
+    const bg = L ? `background:${accent};opacity:${alpha[L]}` : "";
+    cells += `<span class="hm-cell" style="${bg}" title="${fmtD(d)} · ${fmtH(m)} ${T.h}"></span>`;
+  }
+  el.innerHTML = `<div class="hm-inner">
+    <div class="hm-months">${months}</div>
+    <div class="hm-body">
+      <div class="hm-days">${dows.map(d=>`<span>${d}</span>`).join("")}</div>
+      <div class="hm-grid">${cells}</div>
+    </div>
+    <div class="hm-scale">${T.less}
+      ${[0,1,2,3,4].map(L=>`<span class="hm-cell" style="${L?`background:${accent};opacity:${alpha[L]}`:""}"></span>`).join("")}
+      ${T.more}</div>
+  </div>`;
+  document.getElementById("calHint").textContent = "";
+}
+
+/* ---------- table ---------- */
+function renderTable(ranked) {
+  const total = ranked.reduce((a,g)=>a+g.min,0) || 1;
+  const thead = document.getElementById("thead");
+  thead.innerHTML = T.cols.map(([k,label]) => {
+    const num = !["name","share","first","last"].includes(k);
+    const arr = state.sort.k===k ? `<span class="arr">${state.sort.dir<0?" ↓":" ↑"}</span>` : "";
+    return `<th data-k="${k}" class="${num?"num":""}">${label}${arr}</th>`;
+  }).join("");
+  thead.onclick = e => {
+    const th = e.target.closest("th"); if (!th) return;
+    const k = th.dataset.k;
+    state.sort = state.sort.k===k ? {k, dir:-state.sort.dir} : {k, dir:k==="name"?1:-1};
+    renderTable(ranked);
+  };
+  const key = g => ({name:g.name.toLowerCase(), hours:g.min, share:g.min, sessions:g.n, avg:g.min/g.n,
+    longest:g.longest, lifetime:(!isExternal(g)&&LIFETIME[g.app])||0, first:+g.first, last:+g.last}[state.sort.k]);
+  const list = [...ranked].sort((a,b)=>{ const x=key(a),y=key(b); return (x<y?-1:x>y?1:0)*state.sort.dir; })
+    .filter(g => !state.q || g.name.toLowerCase().includes(state.q));
+  document.getElementById("tblHint").textContent = state.q ? T.visible(list.length, ranked.length) : T.games(ranked.length);
+  document.getElementById("rows").innerHTML = list.map(g => {
+    const ext = isExternal(g);
+    const life = !ext && LIFETIME[g.app];
+    const cover = ext
+      ? `<span class="mono-cap" style="background:${COLOR[g.name]}">${esc(initials(g.name))}</span>`
+      : `<img class="cap" loading="lazy" src="${capsule(g.app)}" alt="" onerror="this.outerHTML='<span class=&quot;mono-cap&quot; style=&quot;background:${COLOR[g.name]}&quot;>${esc(initials(g.name))}</span>'">`;
+    return `<tr data-g="${esc(g.name)}" class="${g.name===state.pick?"on":""}">
+      <td><span class="gcell">${cover}<span class="gname" title="${esc(g.name)}">${esc(g.name)}</span>${ext?`<span class="tag">${T.external}</span>`:""}</span></td>
+      <td class="num">${fmtH(g.min)}</td>
+      <td><span class="share"><span class="track"><span class="fill" style="width:${Math.max(1,g.min/ranked[0].min*100)}%;background:${COLOR[g.name]}"></span></span><span class="pct">${(g.min/total*100).toFixed(1)}%</span></span></td>
+      <td class="num">${g.n}</td>
+      <td class="num">${Math.round(g.min/g.n)} ${T.min}</td>
+      <td class="num">${fmtH(g.longest)}</td>
+      <td class="num">${life?fmtH(life):"—"}</td>
+      <td>${fmtShort(g.first)}</td>
+      <td>${fmtShort(g.last)}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("rows").onclick = e => {
+    const tr = e.target.closest("tr"); if (!tr) return;
+    state.pick = tr.dataset.g; render();
+    document.getElementById("pick").focus({preventScroll:true});
+  };
+}
+
+render();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
 </script>
 </body>
 </html>

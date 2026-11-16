@@ -37,12 +37,26 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--csv", metavar="FILE", help="also export every session to CSV")
     p.add_argument("--json", metavar="FILE", help="also export every session to JSON")
     p.add_argument("--no-open", action="store_true", help="do not open the report in the browser")
+    p.add_argument("--demo", action="store_true", help="build the report from invented sample data, without touching Steam")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return p
 
 
 def main(argv: Optional[List[str]] = None) -> int:
     args = build_parser().parse_args(argv)
+
+    out = Path(args.output).resolve()
+    lang = _detect_lang() if args.lang == "auto" else args.lang
+
+    if args.demo:
+        from .demo import demo_sessions
+
+        sessions = demo_sessions()
+        report.render_html(sessions, out, lang)
+        print(f"Report (sample data): {out}")
+        if not args.no_open:
+            webbrowser.open(out.as_uri())
+        return 0
 
     steam_dir = steam.find_steam_dir(args.steam_dir)
     if not steam_dir:
@@ -73,9 +87,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         print("No play sessions found.", file=sys.stderr)
         return 1
 
-    out = Path(args.output).resolve()
-    lang = _detect_lang() if args.lang == "auto" else args.lang
-    report.render_html(sessions, out, lang)
+    report.render_html(sessions, out, lang, steam.playtime_totals(steam_dir))
     if args.csv:
         report.write_csv(sessions, Path(args.csv))
     if args.json:

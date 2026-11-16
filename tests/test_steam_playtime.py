@@ -89,6 +89,36 @@ class SessionTests(FixtureSteam):
         self.assertEqual(len(self.sessions()), 5)
 
 
+class PlaytimeTotalsTests(FixtureSteam):
+    def test_reads_totals_despite_nested_blocks(self):
+        totals = steam.playtime_totals(self.steam_dir)
+        self.assertEqual(totals["1000"], {"minutes": 5400, "last_played": 1767225600})
+        self.assertEqual(totals["2000"]["minutes"], 90)
+        self.assertNotIn("7", totals)  # app entry without playtime
+
+    def test_missing_userdata_is_empty(self):
+        self.assertEqual(steam.playtime_totals(self.tmp), {})
+
+
+class DemoTests(unittest.TestCase):
+    def test_demo_is_deterministic_and_plausible(self):
+        from steam_playtime.demo import demo_sessions
+
+        a, b = demo_sessions(), demo_sessions()
+        self.assertEqual(a, b)
+        self.assertGreater(len(a), 100)
+        self.assertTrue(all(s.minutes >= 8 for s in a))
+
+    def test_demo_cli(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "demo.html"
+            self.assertEqual(main(["--demo", "--no-open", "-o", str(out)]), 0)
+            html = out.read_text(encoding="utf-8")
+            self.assertIn("Ashen Keep", html)
+            self.assertNotIn("__DATA__", html)
+            self.assertNotIn("__TOTALS__", html)
+
+
 class ExeTests(unittest.TestCase):
     def test_exe_path(self):
         self.assertEqual(exe_path('""C:\\A B\\game.exe" -x"'), "C:\\A B\\game.exe")
@@ -132,7 +162,9 @@ class CliTests(FixtureSteam):
         self.assertEqual(main(args), 0)
         html = out.read_text(encoding="utf-8")
         self.assertNotIn("__DATA__", html)
+        self.assertNotIn("__TOTALS__", html)
         self.assertIn("Cool Indie", html)
+        self.assertIn('"1000": 5400', html)  # lifetime minutes embedded for played games
         self.assertEqual(len(json.loads(hist.read_text(encoding="utf-8"))["sessions"]), 5)
         self.assertEqual(len(csv_.read_text(encoding="utf-8").strip().splitlines()), 6)
         # a second run must not duplicate anything
