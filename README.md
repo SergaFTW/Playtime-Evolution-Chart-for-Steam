@@ -29,7 +29,7 @@ The report is saved as `%LOCALAPPDATA%\steam-playtime\steam_playtime.html`, so y
 
 ### Any system, with Python
 
-If you have Python 3.9 or newer ([python.org](https://www.python.org/downloads/)):
+If you have Python 3.10 or newer ([python.org](https://www.python.org/downloads/)):
 
 1. Download this repository: green **Code** button → **Download ZIP**, and unzip it.
 2. Double-click `run.py`, or run `python run.py` in a terminal in that folder.
