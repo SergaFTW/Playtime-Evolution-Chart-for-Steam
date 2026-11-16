@@ -37,6 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--csv", metavar="FILE", help="also export every session to CSV")
     p.add_argument("--json", metavar="FILE", help="also export every session to JSON")
     p.add_argument("--no-open", action="store_true", help="do not open the report in the browser")
+    p.add_argument("--no-covers", action="store_true", help="do not embed game cover images (smaller report)")
     p.add_argument("--demo", action="store_true", help="build the report from invented sample data, without touching Steam")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return p
@@ -87,7 +88,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         print("No play sessions found.", file=sys.stderr)
         return 1
 
-    report.render_html(sessions, out, lang, steam.playtime_totals(steam_dir))
+    images = {} if args.no_covers else steam.header_images(steam_dir, {s.app for s in sessions})
+    report.render_html(sessions, out, lang, steam.playtime_totals(steam_dir), images)
     if args.csv:
         report.write_csv(sessions, Path(args.csv))
     if args.json:

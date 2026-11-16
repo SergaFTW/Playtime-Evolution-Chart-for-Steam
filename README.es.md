@@ -13,7 +13,7 @@ El perfil de Steam solo muestra un total por juego. Esto muestra *cuándo* jugas
 
 ![El informe, generado con datos de ejemplo](docs/report.png)
 
-El informe es un único fichero HTML. Elige el periodo (atajos o fechas exactas), cambia entre barras por día, semana o mes, sigue la curva acumulada de cada juego, consulta un calendario con los días jugados y ordena o filtra la tabla de juegos. Cada juego muestra además el total de por vida que guarda Steam, que incluye lo jugado antes de que empiece el historial de esta herramienta.
+El informe es un único fichero HTML. Elige el periodo (atajos o fechas exactas) y todas las vistas lo siguen: tiempo total comparado con el periodo anterior, el juego más jugado, actividad por día, semana o mes, un ranking de tus juegos principales, curvas acumuladas, un panel de detalle por juego, un calendario de días jugados, un mapa de día de la semana × hora con cuándo juegas y una tabla que se puede ordenar y filtrar. Cada juego muestra además el total de por vida que guarda Steam, que incluye lo jugado antes de que empiece el historial de esta herramienta.
 
 Todo se ejecuta en local. No se sube nada y no hace falta cuenta de Steam ni clave de API. Para probarlo con datos inventados antes de leer los tuyos, ejecútalo con `--demo`.
 
@@ -64,6 +64,7 @@ El comando guarda `steam_playtime.html` en la carpeta actual y lo abre en el nav
 | `--no-history` | Usa solo lo que tienen ahora los logs de Steam |
 | `--csv FICHERO`, `--json FICHERO` | Exporta también todas las sesiones |
 | `--no-open` | No abre el navegador |
+| `--no-covers` | No incrusta las portadas (salen de la caché local de imágenes de Steam; el informe pesa unos 2 MB menos) |
 | `--demo` | Genera el informe con datos de ejemplo inventados, sin tocar Steam |
 
 El AppID de un juego está en la URL de su página de la tienda: `store.steampowered.com/app/<AppID>/…`.

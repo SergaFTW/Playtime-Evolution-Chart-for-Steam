@@ -131,6 +131,34 @@ def playtime_totals(steam_dir: Path) -> Dict[str, dict]:
     return totals
 
 
+_HEADER_NAMES = ("header.jpg", "library_header.jpg")
+
+
+def header_images(steam_dir: Path, apps: Iterable[str]) -> Dict[str, Path]:
+    """Store header image (460x215) per AppID from Steam's local library cache, when cached.
+
+    Newer clients keep them in librarycache/<appid>/<hash>/; older ones as librarycache/<appid>_header.jpg.
+    """
+    cache = steam_dir / "appcache" / "librarycache"
+    found: Dict[str, Path] = {}
+    if not cache.is_dir():
+        return found
+    for app in set(apps):
+        flat = cache / f"{app}_header.jpg"
+        if flat.is_file():
+            found[app] = flat
+            continue
+        folder = cache / app
+        if not folder.is_dir():
+            continue
+        for name in _HEADER_NAMES:
+            hits = sorted(folder.rglob(name), key=lambda p: p.stat().st_size, reverse=True)
+            if hits:
+                found[app] = hits[0]
+                break
+    return found
+
+
 def process_logs(steam_dir: Path) -> List[Path]:
     """gameprocess_log files, oldest first (Steam rotates the old one to *.previous.txt)."""
     logs = list((steam_dir / "logs").glob("gameprocess_log*.txt"))

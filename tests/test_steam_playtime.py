@@ -100,6 +100,30 @@ class PlaytimeTotalsTests(FixtureSteam):
         self.assertEqual(steam.playtime_totals(self.tmp), {})
 
 
+class HeaderImageTests(FixtureSteam):
+    def test_finds_new_and_flat_cache_layouts(self):
+        cache = self.steam_dir / "appcache" / "librarycache"
+        (cache / "1000" / "abc123").mkdir(parents=True)
+        (cache / "1000" / "abc123" / "library_header.jpg").write_bytes(b"\xff\xd8new")
+        (cache / "3000_header.jpg").write_bytes(b"\xff\xd8flat")
+        found = steam.header_images(self.steam_dir, ["1000", "3000", "9999"])
+        self.assertEqual(found["1000"].name, "library_header.jpg")
+        self.assertEqual(found["3000"].name, "3000_header.jpg")
+        self.assertNotIn("9999", found)
+
+    def test_images_embedded_in_report(self):
+        cache = self.steam_dir / "appcache" / "librarycache" / "1000"
+        cache.mkdir(parents=True)
+        (cache / "header.jpg").write_bytes(b"\xff\xd8img")
+        out = self.tmp / "r.html"
+        main(["--steam-dir", str(self.steam_dir), "-o", str(out), "--no-history", "--no-open"])
+        html = out.read_text(encoding="utf-8")
+        self.assertIn('"1000": "data:image/jpeg;base64,', html)
+        self.assertNotIn("__IMAGES__", html)
+        main(["--steam-dir", str(self.steam_dir), "-o", str(out), "--no-history", "--no-open", "--no-covers"])
+        self.assertNotIn("data:image/jpeg;base64,", out.read_text(encoding="utf-8"))
+
+
 class DemoTests(unittest.TestCase):
     def test_demo_is_deterministic_and_plausible(self):
         from steam_playtime.demo import demo_sessions

@@ -13,7 +13,7 @@ Steam's own profile only shows a total per game. This shows *when* you played.
 
 ![The report, built from sample data](docs/report.png)
 
-The report is a single HTML file. Pick a period (presets or exact dates), switch between daily, weekly and monthly bars, follow each game's cumulative curve, check a calendar of played days, and sort or filter the games table. Each game also shows the lifetime total Steam keeps for it, which includes play from before this tool's history starts.
+The report is a single HTML file. Pick a period (presets or exact dates) and every view follows it: total time compared with the previous period, the most played game, activity by day, week or month, a ranking of your top games, cumulative curves, a detail panel per game, a calendar of played days, a weekday × hour map of when you play, and a sortable, searchable table. Each game also shows the lifetime total Steam keeps for it, which includes play from before this tool's history starts.
 
 Everything runs locally. Nothing is uploaded and no Steam account or API key is needed. To try it with invented data before reading your own, run it with `--demo`.
 
@@ -64,6 +64,7 @@ The command writes `steam_playtime.html` to the current folder and opens it in y
 | `--no-history` | Only use what Steam's logs hold right now |
 | `--csv FILE`, `--json FILE` | Also export every session |
 | `--no-open` | Don't open the browser |
+| `--no-covers` | Don't embed game covers (they come from Steam's local image cache; the report gets about 2 MB smaller) |
 | `--demo` | Build the report from invented sample data, without touching Steam |
 
 Find an AppID in a game's Steam store URL: `store.steampowered.com/app/<AppID>/…`.
