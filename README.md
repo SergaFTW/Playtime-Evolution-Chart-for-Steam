@@ -13,26 +13,38 @@ Steam's own profile only shows a total per game. This shows *when* you played.
 
 Everything runs locally. Nothing is uploaded and no Steam account or API key is needed.
 
-## Requirements
+## How to use it
 
-- Python 3.9 or newer ([python.org](https://www.python.org/downloads/)). No other packages.
-- The Steam desktop client, with games launched through it at least once.
-- An internet connection when you open the report, to load the chart library (Chart.js). The table works offline.
+You need the Steam desktop client, with games launched through it at least once. Opening the report needs an internet connection to load the charts; the table works offline.
 
-## Quick start
+### Windows: just the program (no Python needed)
+
+1. Go to [**Releases**](https://github.com/SergaFTW/Playtime-Evolution-Chart-for-Steam/releases/latest) and download `SteamPlaytime.exe`.
+2. Double-click it. A window shows the progress and your report opens in the browser.
+3. Run it again whenever you want an updated report.
+
+The first time, Windows may show *"Windows protected your PC"*, because the program isn't signed. Click **More info → Run anyway**.
+
+The report is saved as `%LOCALAPPDATA%\steam-playtime\steam_playtime.html`, so you can also open it later without running the program.
+
+### Any system, with Python
+
+If you have Python 3.9 or newer ([python.org](https://www.python.org/downloads/)):
+
+1. Download this repository: green **Code** button → **Download ZIP**, and unzip it.
+2. Double-click `run.py`, or run `python run.py` in a terminal in that folder.
+
+To install it as a command (`steam-playtime`) instead, with all the options below:
 
 ```bash
-pip install git+https://github.com/SergaFTW/Playtime-Evolution-Chart-for-Steam.git
+pip install https://github.com/SergaFTW/Playtime-Evolution-Chart-for-Steam/archive/refs/heads/main.zip
+```
+
+```bash
 steam-playtime
 ```
 
-Or without installing: download the repository (Code → Download ZIP), unzip it, open a terminal in that folder and run:
-
-```bash
-python -m steam_playtime
-```
-
-The report is written to `steam_playtime.html` in the current folder and opens in your browser.
+The command writes `steam_playtime.html` to the current folder and opens it in your browser.
 
 ## Options
 
@@ -102,6 +114,8 @@ python -m unittest -v
 ```
 
 The tests use a fake Steam folder in `tests/fixtures`.
+
+To build the executable yourself: `pip install pyinstaller`, then `python build_exe.py` (output in `dist/`). Pushing a tag like `v0.2.0` builds the Windows `.exe` and publishes it as a GitHub Release automatically.
 
 ## License
 

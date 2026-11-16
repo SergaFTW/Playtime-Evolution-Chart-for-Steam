@@ -10,3 +10,4 @@ venv/
 steam_playtime.html
 *.csv
 history.json
+*.spec
